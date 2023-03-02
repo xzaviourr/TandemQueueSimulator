@@ -1,6 +1,6 @@
 import logging
 import os
-import datetime
+from datetime import datetime
 
 
 BASE = os.path.dirname(os.path.abspath(__file__))   # Project directory
@@ -15,6 +15,12 @@ LOG_FILE_PATHS = {
     "EVENT_HANDLER": os.path.join(ITER_LOGS_DIR, "event_handler.log"),
     "TEMP": os.path.join(ITER_LOGS_DIR, "temp.log")
 }
+
+# Setup directories
+list_of_directories = [LOGS_DIR, ITER_LOGS_DIR]
+for directory in list_of_directories:
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
 # Event codes
 EVENT_REQUEST_ARRIVAL = 1

@@ -6,3 +6,9 @@ class Event:
         self.type = type
         self.request = request
         self.time = time
+
+    def __lt__(self, other):
+        return self.time < other.time
+    
+    def __str__(self):
+        return f"{self.type} : {self.time}"
