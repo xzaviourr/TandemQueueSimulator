@@ -11,4 +11,9 @@ class Event:
         return self.time < other.time
     
     def __str__(self):
-        return f"{self.type} : {self.time}"
+        if self.type == 1:
+            return f"EVENT_REQUEST_ARRIVAL : {self.request.id} : {self.time}"
+        elif self.type == 2:
+            return f"EVENT_REQUEST_COMPLETE_FROM_APP_SERVER : {self.request.id} : {self.time}"
+        else:
+            return f"EVENT_REQUEST_COMPLETE_FROM_DB_SERVER : {self.request.id} : {self.time}"

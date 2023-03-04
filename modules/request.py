@@ -1,5 +1,6 @@
 class Request:
-    def __init__(self, request_priority:int, request_timeout:float, need_server:int) -> None:
+    counter = 0
+    def __init__(self, request_priority:int, request_timeout:float, need_server:int, arrival_time:int) -> None:
         """Instance of a web server request
 
         Args:
@@ -7,6 +8,10 @@ class Request:
             request_timeout (float): timeout value after which request is dropped
             need_server (int): server type
         """
+        self.id = Request.counter
+        Request.counter += 1
+
         self.request_priority = request_priority
         self.request_timeout = request_timeout
         self.need_server = need_server
+        self.arrival_time = arrival_time

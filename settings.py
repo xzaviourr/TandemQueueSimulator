@@ -10,7 +10,7 @@ ITER_LOGS_DIR = os.path.join(LOGS_DIR, f"log_{datetime.now().strftime('%Y%m%d%H%
 # Logging
 VERBOSE = 1
 STREAM_HANDLER_LOGGING_LEVEL = logging.WARNING
-FILE_HANDLER_LOGGING_LEVEL = logging.DEBUG
+FILE_HANDLER_LOGGING_LEVEL = logging.INFO
 LOG_FILE_PATHS = {
     "EVENT_HANDLER": os.path.join(ITER_LOGS_DIR, "event_handler.log"),
     "TEMP": os.path.join(ITER_LOGS_DIR, "temp.log")
@@ -30,6 +30,7 @@ EVENT_REQUEST_COMPLETE_FROM_DB_SERVER = 3
 # Request
 HIGH_PRIORITY = 1
 LOW_PRIORITY = 0
+REQUEST_TIMEOUT = 5
 
 # Server
 APPLICATION_SERVER = 1
