@@ -75,4 +75,16 @@ class Simulator:
 system throughput : {self.event_handler.request_completed_from_system/self.simulation_time} reqs/sec
 app server throughput : {self.event_handler.request_completed_from_app_counter/self.simulation_time} reqs/sec
 db server throughput : {self.event_handler.request_completed_from_db_counter/self.simulation_time} reqs/sec
+
+system average response time : {self.event_handler.average_response_time_of_system} sec
+app server average response time : {self.event_handler.average_response_time_of_app_server} sec
+db server average response time : {self.event_handler.average_response_time_of_db_server} sec
+
+number in system : {self.event_handler.number_in_system}
+number in app server : {self.event_handler.number_in_app_server}
+number in db app server : {self.event_handler.number_in_db_server}
+
+requests dropped : {self.event_handler.request_dropped}
+total requests served : {self.event_handler.request_completed_from_system}
+fraction of requests dropped : {round((self.event_handler.request_dropped)/(self.event_handler.request_completed_from_system + self.event_handler.request_dropped),3)}
         """)
