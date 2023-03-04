@@ -13,6 +13,17 @@ from utils.probability_gen import get_probablity, calculate_average_response_tim
 class EventHandler:
     def __init__(self, event_queue:List[Event], application_server:Server, db_server:Server, app_to_db_prob:float, 
                  think_time:float, priority_prob:float, logger:logging.Logger) -> None:
+        """Instance of event handler for the simulator
+
+        Args:
+            event_queue (List[Event]): Event queue for the simulator
+            application_server (Server): Application server instance
+            db_server (Server): Db server instance
+            app_to_db_prob (float): Probability request will go from app server to db server
+            think_time (float): think time of the users
+            priority_prob (float): probability that request is of high probability 
+            logger (logging.Logger): Logger object
+        """
         self.logger = logger
         
         self.application_server = application_server
@@ -37,6 +48,12 @@ class EventHandler:
         self.number_in_system = self.number_in_app_server + self.number_in_db_server
 
     def handle_event(self, event:Event, current_time:float):
+        """Event handle function
+
+        Args:
+            event (Event): Event object
+            current_time (float): simulation time
+        """
         self.logger.critical(event)
         if event.type == settings.EVENT_REQUEST_ARRIVAL:    # When a request arrives at the application server
             if event.request.need_server == settings.APPLICATION_SERVER:    # arrived at application server

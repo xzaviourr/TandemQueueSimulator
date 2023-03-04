@@ -7,8 +7,9 @@ class Request:
             request_priority (int): priority of request
             request_timeout (float): timeout value after which request is dropped
             need_server (int): server type
+            arrival_time (int): arrival time of the request in the system
         """
-        self.id = Request.counter
+        self.id = Request.counter   
         Request.counter += 1
 
         self.request_priority = request_priority

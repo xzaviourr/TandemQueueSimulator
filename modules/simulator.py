@@ -12,6 +12,8 @@ from utils.logger import get_logger
 
 class Simulator:
     def __init__(self, **argv) -> None:
+        """Simulator instance
+        """
         self.logger = get_logger("EVENT_HANDLER")
         
         self.simulation_time = argv['simulation_time']
@@ -42,6 +44,11 @@ class Simulator:
         self.initialize_simulation(priority_prob = argv['priority_prob'])
 
     def initialize_simulation(self, priority_prob):
+        """Initialize the simulator with start events
+
+        Args:
+            priority_prob (float): Probability that request is of high priority
+        """
         self.logger.info("INITIALIZING SIMULATION ...")
         
         for i in range(self.num_clients):
@@ -60,6 +67,8 @@ class Simulator:
             )
 
     def run(self):
+        """Run the simulation
+        """
         self.logger.info("SIMULATION STARTED ...")
 
         current_time = 0

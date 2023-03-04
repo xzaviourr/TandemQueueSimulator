@@ -22,16 +22,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     sim = Simulator(
-        # application_server_count = 2,
-        # db_server_count = 2,
-        # application_service_time = 0.01,
-        # db_service_time = 0.1,
-        # app_to_db_prob = 0.75,
-        # simulation_time = 10,
-        # think_time = 5,
-        # priority_prob = 0.2,
-        # clients = 10000
-
         application_server_count = args.app_servers,
         db_server_count = args.db_servers,
         application_service_time = args.app_server_service_time,
