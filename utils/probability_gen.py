@@ -39,3 +39,6 @@ def calculate_number_in_the_server(server):
         int: Number of requests in the server
     """
     return server.busy_cores + len(server.regular_queue) + len(server.priority_queue)
+
+def get_retry_delay(mean_retry_delay):
+    return abs(np.random.normal(mean_retry_delay))

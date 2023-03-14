@@ -36,7 +36,10 @@ class Simulator:
             app_to_db_prob = argv["app_to_db_prob"],
             think_time = argv['think_time'],
             priority_prob = argv['priority_prob'],
-            logger = self.logger
+            logger = self.logger,
+            app_server_queue_length = argv["app_server_queue_length"],
+            db_server_queue_length = argv["db_server_queue_length"],
+            retry_delay = argv['retry_delay']
         )
 
         self.num_clients = argv['clients']
@@ -93,7 +96,8 @@ number in system : {self.event_handler.number_in_system}
 number in app server : {self.event_handler.number_in_app_server}
 number in db app server : {self.event_handler.number_in_db_server}
 
-requests dropped : {self.event_handler.request_dropped}
+priority requests dropped : {self.event_handler.priority_request_dropped}
+regular requests dropped : {self.event_handler.regular_request_dropped}
 total requests served : {self.event_handler.request_completed_from_system}
-fraction of requests dropped : {round((self.event_handler.request_dropped)/(self.event_handler.request_completed_from_system + self.event_handler.request_dropped),3)}
+fraction of requests dropped : {round((self.event_handler.priority_request_dropped + self.event_handler.regular_request_dropped)/(self.event_handler.request_completed_from_system + self.event_handler.priority_request_dropped + self.event_handler.regular_request_dropped),3)}
         """)
