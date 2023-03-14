@@ -8,16 +8,16 @@ from modules.simulator import Simulator
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Web Server Simulation')
-    parser.add_argument('--app_servers', required=True, help='number of application servers')
-    parser.add_argument('--db_servers', required=True, help='number of database servers')
-    parser.add_argument('--app_server_service_time', required=True, help='service time of application servers')
-    parser.add_argument('--db_server_service_time', required=True, help='service time of database servers')
-    parser.add_argument('--app_to_db_server_probability', required=True, 
+    parser.add_argument('--app_servers', type=int, required=True, help='number of application servers')
+    parser.add_argument('--db_servers', type=int, required=True, help='number of database servers')
+    parser.add_argument('--app_server_service_time', type=float, required=True, help='service time of application servers')
+    parser.add_argument('--db_server_service_time', type=float, required=True, help='service time of database servers')
+    parser.add_argument('--app_to_db_server_probability', type=float, required=True, 
                         help='probability of request going to database server from application server')
-    parser.add_argument('--simulation_time', required=True, help='number of application servers')
-    parser.add_argument('--num_clients', required=True, help='number of application servers')
-    parser.add_argument('--think_time', required=True, help='think time of client')
-    parser.add_argument('--priority_probability', required=True, help='probability of request being a priority request')
+    parser.add_argument('--simulation_time', type=float, required=True, help='number of application servers')
+    parser.add_argument('--num_clients', type=int, required=True, help='number of application servers')
+    parser.add_argument('--think_time', type=float, required=True, help='think time of client')
+    parser.add_argument('--priority_probability', type=float, required=True, help='probability of request being a priority request')
 
     args = parser.parse_args()
 
