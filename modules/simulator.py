@@ -1,7 +1,8 @@
 import settings
 
 import heapq
-
+import os 
+import pandas as pd
 from modules.server import Server
 from modules.event_handler import EventHandler
 from modules.event import Event
@@ -39,10 +40,12 @@ class Simulator:
             logger = self.logger,
             app_server_queue_length = argv["app_server_queue_length"],
             db_server_queue_length = argv["db_server_queue_length"],
-            retry_delay = argv['retry_delay']
+            retry_delay = argv['retry_delay'],
+            request_timeout = argv['request_timeout']
         )
 
         self.num_clients = argv['clients']
+        self.request_timeout = argv['request_timeout']
     
         self.initialize_simulation(priority_prob = argv['priority_prob'])
 
@@ -61,7 +64,7 @@ class Simulator:
                     type = settings.EVENT_REQUEST_ARRIVAL,
                     request = Request(
                         request_priority = int(get_probablity(priority_prob)),
-                        request_timeout = settings.REQUEST_TIMEOUT,
+                        request_timeout = self.request_timeout,
                         need_server = settings.APPLICATION_SERVER,
                         arrival_time = 0
                     ),
@@ -83,21 +86,62 @@ class Simulator:
                 current_time = current_time
             )
 
-        print(f"""
-system throughput : {self.event_handler.request_completed_from_system/self.simulation_time} reqs/sec
-app server throughput : {self.event_handler.request_completed_from_app_counter/self.simulation_time} reqs/sec
-db server throughput : {self.event_handler.request_completed_from_db_counter/self.simulation_time} reqs/sec
+        results = pd.DataFrame({
+            "num_clients" : [self.num_clients],
+            "app_servers" : [self.event_handler.application_server.core_count],
+            "db_servers" : [self.event_handler.db_server.core_count],
+            "app_server_service_time" : [self.event_handler.application_server.average_service_time],
+            "db_server_service_time" : [self.event_handler.db_server.average_service_time],
+            "app_to_db_server_probability" : [self.event_handler.app_to_db_prob],
+            "priority_probability" : [self.event_handler.priority_prob],
+            "app_server_queue_length" : [self.event_handler.app_server_queue_length],
+            "db_server_queue_length" : [self.event_handler.db_server_queue_length],
 
-system average response time : {self.event_handler.average_response_time_of_system} sec
-app server average response time : {self.event_handler.average_response_time_of_app_server} sec
-db server average response time : {self.event_handler.average_response_time_of_db_server} sec
+            "system_throughput" : [self.event_handler.request_completed_from_system/self.simulation_time],
+            "app_server_throughput" : [self.event_handler.request_completed_from_app_counter/self.simulation_time],
+            "db_server_throughput" : [self.event_handler.request_completed_from_db_counter/self.simulation_time],
 
-number in system : {self.event_handler.number_in_system}
-number in app server : {self.event_handler.number_in_app_server}
-number in db app server : {self.event_handler.number_in_db_server}
+            "system_average_response_time" : [self.event_handler.average_response_time_of_system],
+            "app_server_average_response_time" : [self.event_handler.average_response_time_of_app_server],
+            "db_server_average_response_time" : [self.event_handler.average_response_time_of_db_server],
 
-priority requests dropped : {self.event_handler.priority_request_dropped}
-regular requests dropped : {self.event_handler.regular_request_dropped}
-total requests served : {self.event_handler.request_completed_from_system}
-fraction of requests dropped : {round((self.event_handler.priority_request_dropped + self.event_handler.regular_request_dropped)/(self.event_handler.request_completed_from_system + self.event_handler.priority_request_dropped + self.event_handler.regular_request_dropped),3)}
-        """)
+            "number_in_system" : [self.event_handler.number_in_system],
+            "number_in_app_server" : [self.event_handler.number_in_app_server],
+            "number_in_db_app_server" : [self.event_handler.number_in_db_server],
+
+            "priority_requests_dropped" : [self.event_handler.priority_request_dropped],
+            "regular_requests_dropped" : [self.event_handler.regular_request_dropped],
+            "total_requests_served" : [self.event_handler.request_completed_from_system],
+            "fraction_of_requests_dropped" : [round((self.event_handler.priority_request_dropped + self.event_handler.regular_request_dropped)/(self.event_handler.request_completed_from_system + self.event_handler.priority_request_dropped + self.event_handler.regular_request_dropped),3)],
+
+            "app_server_utilization" : [self.event_handler.application_server.busy_cores/self.event_handler.application_server.core_count],
+            "db_server_utlization": [self.event_handler.db_server.busy_cores/self.event_handler.db_server.core_count]
+        })
+
+        # if file does not exist write header 
+        if not os.path.isfile('RT_{}_simulation.csv'.format(self.request_timeout)):
+            results.to_csv('RT_{}_simulation.csv'.format(self.request_timeout), header='column_names', index=False)
+        else: # else it exists so append without writing the header
+            results.to_csv('RT_{}_simulation.csv'.format(self.request_timeout), mode='a', header=False, index=False)
+
+#         print(f"""
+# system throughput : {self.event_handler.request_completed_from_system/self.simulation_time} reqs/sec
+# app server throughput : {self.event_handler.request_completed_from_app_counter/self.simulation_time} reqs/sec
+# db server throughput : {self.event_handler.request_completed_from_db_counter/self.simulation_time} reqs/sec
+
+# system average response time : {self.event_handler.average_response_time_of_system} sec
+# app server average response time : {self.event_handler.average_response_time_of_app_server} sec
+# db server average response time : {self.event_handler.average_response_time_of_db_server} sec
+
+# number in system : {self.event_handler.number_in_system}
+# number in app server : {self.event_handler.number_in_app_server}
+# number in db app server : {self.event_handler.number_in_db_server}
+
+# priority requests dropped : {self.event_handler.priority_request_dropped}
+# regular requests dropped : {self.event_handler.regular_request_dropped}
+# total requests served : {self.event_handler.request_completed_from_system}
+# fraction of requests dropped : {round((self.event_handler.priority_request_dropped + self.event_handler.regular_request_dropped)/(self.event_handler.request_completed_from_system + self.event_handler.priority_request_dropped + self.event_handler.regular_request_dropped),3)}
+
+# app server utilization : {self.event_handler.application_server.busy_cores/self.event_handler.application_server.core_count}
+# db server utlization: {self.event_handler.db_server.busy_cores/self.event_handler.db_server.core_count}
+#         """)

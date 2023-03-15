@@ -12,7 +12,7 @@ from utils.probability_gen import get_probablity, calculate_average_response_tim
 
 class EventHandler:
     def __init__(self, event_queue:List[Event], application_server:Server, db_server:Server, app_to_db_prob:float, 
-                 think_time:float, priority_prob:float, logger:logging.Logger, app_server_queue_length:int, db_server_queue_length:int, retry_delay:float) -> None:
+                 think_time:float, priority_prob:float, logger:logging.Logger, app_server_queue_length:int, db_server_queue_length:int, retry_delay:float, request_timeout:int) -> None:
         """Instance of event handler for the simulator
 
         Args:
@@ -35,6 +35,7 @@ class EventHandler:
         self.app_server_queue_length = app_server_queue_length
         self.db_server_queue_length = db_server_queue_length
         self.retry_delay = retry_delay
+        self.request_timeout = request_timeout
 
         self.request_dropped_dict = {}
         self.request_completed_dict = {}
@@ -72,7 +73,7 @@ class EventHandler:
             Event(     # Timout event
                 type = settings.EVENT_TIMEOUT,
                 request = event.request,
-                time = current_time + settings.REQUEST_TIMEOUT
+                time = current_time + self.request_timeout
             )
         )
 
@@ -126,7 +127,7 @@ class EventHandler:
                             type = settings.EVENT_REQUEST_ARRIVAL,
                             request = Request(
                                 request_priority = int(get_probablity(self.priority_prob)),
-                                request_timeout = settings.REQUEST_TIMEOUT,
+                                request_timeout = self.request_timeout,
                                 need_server = settings.APPLICATION_SERVER,
                                 arrival_time = current_time + self.think_time
                             ),
@@ -233,7 +234,7 @@ class EventHandler:
             type = settings.EVENT_REQUEST_ARRIVAL,
             request = Request(
                 request_priority = event.request.request_priority,
-                request_timeout = settings.REQUEST_TIMEOUT,
+                request_timeout = self.request_timeout,
                 need_server = settings.APPLICATION_SERVER,
                 arrival_time = current_time + get_retry_delay(self.retry_delay) 
             ),
