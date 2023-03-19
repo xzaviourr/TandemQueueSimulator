@@ -12,7 +12,8 @@ from utils.probability_gen import get_probablity, calculate_average_response_tim
 
 class EventHandler:
     def __init__(self, event_queue:List[Event], application_server:Server, db_server:Server, app_to_db_prob:float, 
-                 think_time:float, priority_prob:float, logger:logging.Logger, app_server_queue_length:int, db_server_queue_length:int, retry_delay:float, request_timeout:int) -> None:
+                 think_time:float, priority_prob:float, logger:logging.Logger, app_server_queue_length:int, 
+                 db_server_queue_length:int, retry_delay:float, request_timeout:int) -> None:
         """Instance of event handler for the simulator
 
         Args:
@@ -23,6 +24,10 @@ class EventHandler:
             think_time (float): think time of the users
             priority_prob (float): probability that request is of high probability 
             logger (logging.Logger): Logger object
+            app_server_queue_length (int): Maximum length of waiting queue of app server
+            db_server_queue_length (int): Maximum lenght of waiting queue of db server
+            retry_delay (float): Retry sending packet after failure
+            request_timeout (float): Timeout value for requests
         """
         self.logger = logger
         
@@ -56,6 +61,14 @@ class EventHandler:
         self.number_in_system = self.number_in_app_server + self.number_in_db_server
 
     def push_in_queue(self, event:Event, server:Server, queue_length:int, current_time:float):
+        """Pushes event in queue
+
+        Args:
+            event (Event): Event to be served
+            server (Server): Application or Db server
+            queue_length (int): Max queue length
+            current_time (float): Current time
+        """
         if event.request.request_priority == settings.HIGH_PRIORITY:
             if len(server.priority_queue) < queue_length:
                 server.priority_queue.append(event.request)
@@ -68,6 +81,12 @@ class EventHandler:
                 self.handle_event_timeout(event, current_time)  # Request dropped due to queue overflow
 
     def handle_event_request_arrival(self, event:Event, current_time:float):
+        """Event generated when request arrives at the application server
+
+        Args:
+            event (Event): Event to be handled
+            current_time (float): current time of the simulation
+        """
         heapq.heappush(
             self.event_queue, 
             Event(     # Timout event
@@ -96,6 +115,12 @@ class EventHandler:
         self.number_in_system = self.number_in_app_server + self.number_in_db_server
 
     def handle_event_request_complete_from_app_server(self, event:Event, current_time:float):
+        """Event handled when request gets completed from the app server
+
+        Args:
+            event (Event): Event to be handled
+            current_time (float): current time of the simulation
+        """
         if not event.request.id in self.request_dropped_dict.keys():
             response_time = current_time - event.request.arrival_time
             self.average_response_time_of_app_server = calculate_average_response_time(self.average_response_time_of_app_server, self.request_completed_from_app_counter, response_time)
@@ -172,6 +197,12 @@ class EventHandler:
         self.number_in_system = self.number_in_app_server + self.number_in_db_server
 
     def handle_event_request_complete_from_db_server(self, event:Event, current_time:float):
+        """Event handled when request processing is completed from the db server
+
+        Args:
+            event (Event): Event to be handled
+            current_time (float): current simulation time
+        """
         if event.request.id not in self.request_dropped_dict.keys():
             response_time = current_time - event.request.arrival_time
             self.average_response_time_of_db_server = calculate_average_response_time(self.average_response_time_of_db_server, self.request_completed_from_db_counter, response_time)
@@ -191,6 +222,8 @@ class EventHandler:
                     self.application_server.busy_cores += 1
             else:
                 self.push_in_queue(event, self.application_server, self.app_server_queue_length, current_time)
+        else:
+            self.db_server.busy_cores -= 1
 
         # Schedule new request
         while True:
@@ -220,6 +253,12 @@ class EventHandler:
         self.number_in_system = self.number_in_app_server + self.number_in_db_server
 
     def handle_event_timeout(self, event:Event, current_time:float):
+        """Event handled when timeout is raised or buffer queue is full
+
+        Args:
+            event (Event): Event to be handled
+            current_time (float): current time of the simulation
+        """
         self.logger.critical(f"REQUEST_DROPPED : {event.request.id} : {current_time}")
         if event.request.request_priority == settings.HIGH_PRIORITY:
             self.priority_request_dropped += 1

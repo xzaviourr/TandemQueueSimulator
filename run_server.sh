@@ -1,13 +1,10 @@
 #!/bin/bash
 
-# for (( request_timeout=80 ; request_timeout>0; request_timeout=request_timeout-20 ))
 for (( request_timeout=20 ; request_timeout>0; request_timeout=request_timeout-20 ))
 do
     echo Request_Timeout: $request_timeout
     request_timeout_str=$(echo $request_timeout)
-    # for (( num_users=1; num_users<=1501; num_users=num_users+20));
     for (( num_users=1401; num_users<=1501; num_users=num_users+20));
-    # for num_users in {1..1000}
     do
         num_users_str=$(echo $num_users)
         echo Number_of_users: $num_users_str
