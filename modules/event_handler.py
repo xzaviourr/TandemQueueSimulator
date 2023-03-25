@@ -45,9 +45,13 @@ class EventHandler:
         self.request_dropped_dict = {}
         self.request_completed_dict = {}
 
-        self.request_completed_from_app_counter = 0
-        self.request_completed_from_db_counter = 0
-        self.request_completed_from_system = 0
+        self.request_completed_from_app_counter_for_goodput = 0
+        self.request_completed_from_db_counter_for_goodput = 0
+        self.request_completed_from_system_for_goodput = 0
+
+        self.request_completed_from_app_counter_for_badput = 0
+        self.request_completed_from_db_counter_for_badput = 0
+        self.request_completed_from_system_for_badput = 0
 
         self.priority_request_dropped = 0
         self.regular_request_dropped = 0
@@ -123,8 +127,11 @@ class EventHandler:
         """
         if not event.request.id in self.request_dropped_dict.keys():
             response_time = current_time - event.request.arrival_time
-            self.average_response_time_of_app_server = calculate_average_response_time(self.average_response_time_of_app_server, self.request_completed_from_app_counter, response_time)
-            self.request_completed_from_app_counter += 1
+            self.average_response_time_of_app_server = calculate_average_response_time(self.average_response_time_of_app_server, (self.request_completed_from_app_counter_for_goodput + self.request_completed_from_app_counter_for_badput), response_time)
+            if event.request.is_timed_out:
+                self.request_completed_from_app_counter_for_badput += 1
+            else:
+                self.request_completed_from_app_counter_for_goodput += 1
             
             if get_probablity(self.app_to_db_prob): # Request moves to db
                 if self.db_server.busy_cores < self.db_server.core_count:   # Request goes to processing
@@ -161,8 +168,11 @@ class EventHandler:
                     )
                 self.application_server.busy_cores -= 1    
                 response_time = (current_time - event.request.arrival_time)
-                self.average_response_time_of_system = calculate_average_response_time(self.average_response_time_of_system, self.request_completed_from_system, response_time)
-                self.request_completed_from_system += 1
+                self.average_response_time_of_system = calculate_average_response_time(self.average_response_time_of_system, (self.request_completed_from_system_for_goodput + self.request_completed_from_system_for_badput), response_time)
+                if event.request.is_timed_out:
+                    self.request_completed_from_system_for_badput += 1
+                else:
+                    self.request_completed_from_system_for_goodput += 1
         
         else:
             self.application_server.busy_cores -= 1            
@@ -205,8 +215,11 @@ class EventHandler:
         """
         if event.request.id not in self.request_dropped_dict.keys():
             response_time = current_time - event.request.arrival_time
-            self.average_response_time_of_db_server = calculate_average_response_time(self.average_response_time_of_db_server, self.request_completed_from_db_counter, response_time)
-            self.request_completed_from_db_counter += 1
+            self.average_response_time_of_db_server = calculate_average_response_time(self.average_response_time_of_db_server, (self.request_completed_from_db_counter_for_goodput + self.request_completed_from_db_counter_for_badput), response_time)
+            if event.request.is_timed_out:
+                self.request_completed_from_db_counter_for_badput += 1
+            else:
+                self.request_completed_from_db_counter_for_goodput += 1
             
             self.db_server.busy_cores -= 1
             if self.application_server.busy_cores < self.application_server.core_count:  # cores are available
@@ -252,7 +265,7 @@ class EventHandler:
         self.number_in_db_server = calculate_number_in_the_server(self.db_server)
         self.number_in_system = self.number_in_app_server + self.number_in_db_server
 
-    def handle_event_timeout(self, event:Event, current_time:float):
+    def handle_event_timeout(self, event:Event, current_time:float, is_timeout:bool=False):
         """Event handled when timeout is raised or buffer queue is full
 
         Args:
@@ -267,19 +280,35 @@ class EventHandler:
 
         self.request_dropped_dict[event.request.id] = 1
 
-        heapq.heappush(
-        self.event_queue,
-        Event(
-            type = settings.EVENT_REQUEST_ARRIVAL,
-            request = Request(
-                request_priority = event.request.request_priority,
-                request_timeout = self.request_timeout,
-                need_server = settings.APPLICATION_SERVER,
-                arrival_time = current_time + get_retry_delay(self.retry_delay) 
-            ),
-            time = current_time + get_retry_delay(self.retry_delay) 
+        if not is_timeout:
+            heapq.heappush(
+            self.event_queue,
+            Event(
+                type = settings.EVENT_REQUEST_ARRIVAL,
+                request = Request(
+                    request_priority = event.request.request_priority,
+                    request_timeout = self.request_timeout,
+                    need_server = settings.APPLICATION_SERVER,
+                    arrival_time = current_time + get_retry_delay(self.retry_delay) 
+                ),
+                time = current_time + get_retry_delay(self.retry_delay) 
+                )
             )
-        )
+        else:
+            heapq.heappush(
+            self.event_queue,
+            Event(
+                type = settings.EVENT_REQUEST_ARRIVAL,
+                request = Request(
+                    request_priority = event.request.request_priority,
+                    request_timeout = self.request_timeout,
+                    need_server = settings.APPLICATION_SERVER,
+                    arrival_time = current_time + get_retry_delay(self.retry_delay),
+                    is_timed_out = True 
+                ),
+                time = current_time + get_retry_delay(self.retry_delay) 
+                )
+            )
 
     def handle_event(self, event:Event, current_time:float):
         """Event handle function
@@ -300,4 +329,4 @@ class EventHandler:
 
         elif event.type == settings.EVENT_TIMEOUT:
             if event.request.id not in self.request_completed_dict.keys():  # Completed
-                self.handle_event_timeout(event=event, current_time=current_time)
+                self.handle_event_timeout(event=event, current_time=current_time, is_timeout=True)

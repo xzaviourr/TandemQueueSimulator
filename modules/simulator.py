@@ -97,9 +97,21 @@ class Simulator:
             "app_server_queue_length" : [self.event_handler.app_server_queue_length],
             "db_server_queue_length" : [self.event_handler.db_server_queue_length],
 
-            "system_throughput" : [self.event_handler.request_completed_from_system/self.simulation_time],
-            "app_server_throughput" : [self.event_handler.request_completed_from_app_counter/self.simulation_time],
-            "db_server_throughput" : [self.event_handler.request_completed_from_db_counter/self.simulation_time],
+            # "system_throughput" : [self.event_handler.request_completed_from_system/self.simulation_time],
+            # "app_server_throughput" : [self.event_handler.request_completed_from_app_counter/self.simulation_time],
+            # "db_server_throughput" : [self.event_handler.request_completed_from_db_counter/self.simulation_time],
+
+            "system_throughput" : [(self.event_handler.request_completed_from_system_for_goodput + self.event_handler.request_completed_from_system_for_badput)/self.simulation_time],
+            "app_server_throughput" : [(self.event_handler.request_completed_from_app_counter_for_goodput + self.event_handler.request_completed_from_app_counter_for_badput)/self.simulation_time],
+            "db_server_throughput" : [(self.event_handler.request_completed_from_db_counter_for_goodput + self.event_handler.request_completed_from_db_counter_for_badput)/self.simulation_time],
+
+            "system_goodput" : [self.event_handler.request_completed_from_system_for_goodput/self.simulation_time],
+            "app_server_goodput" : [self.event_handler.request_completed_from_app_counter_for_goodput/self.simulation_time],
+            "db_server_goodput" : [self.event_handler.request_completed_from_db_counter_for_goodput/self.simulation_time],
+
+            "system_badput" : [self.event_handler.request_completed_from_system_for_badput/self.simulation_time],
+            "app_server_badput" : [self.event_handler.request_completed_from_app_counter_for_badput/self.simulation_time],
+            "db_server_badput" : [self.event_handler.request_completed_from_db_counter_for_badput/self.simulation_time],
 
             "system_average_response_time" : [self.event_handler.average_response_time_of_system],
             "app_server_average_response_time" : [self.event_handler.average_response_time_of_app_server],
@@ -111,8 +123,8 @@ class Simulator:
 
             "priority_requests_dropped" : [self.event_handler.priority_request_dropped],
             "regular_requests_dropped" : [self.event_handler.regular_request_dropped],
-            "total_requests_served" : [self.event_handler.request_completed_from_system],
-            "fraction_of_requests_dropped" : [round((self.event_handler.priority_request_dropped + self.event_handler.regular_request_dropped)/(self.event_handler.request_completed_from_system + self.event_handler.priority_request_dropped + self.event_handler.regular_request_dropped),3)],
+            "total_requests_served" : [(self.event_handler.request_completed_from_system_for_goodput + self.event_handler.request_completed_from_system_for_badput)],
+            "fraction_of_requests_dropped" : [round((self.event_handler.priority_request_dropped + self.event_handler.regular_request_dropped)/(self.event_handler.request_completed_from_system_for_goodput + self.event_handler.request_completed_from_system_for_badput + self.event_handler.priority_request_dropped + self.event_handler.regular_request_dropped),3)],
 
             "app_server_utilization" : [self.event_handler.application_server.busy_cores/self.event_handler.application_server.core_count],
             "db_server_utlization": [self.event_handler.db_server.busy_cores/self.event_handler.db_server.core_count]
@@ -125,9 +137,17 @@ class Simulator:
             results.to_csv('RT_{}_simulation.csv'.format(self.request_timeout), mode='a', header=False, index=False)
 
         print(f"""
-system throughput : {self.event_handler.request_completed_from_system/self.simulation_time} reqs/sec
-app server throughput : {self.event_handler.request_completed_from_app_counter/self.simulation_time} reqs/sec
-db server throughput : {self.event_handler.request_completed_from_db_counter/self.simulation_time} reqs/sec
+system throughput : {(self.event_handler.request_completed_from_system_for_goodput + self.event_handler.request_completed_from_system_for_badput)/self.simulation_time} reqs/sec
+app server throughput : {(self.event_handler.request_completed_from_app_counter_for_goodput + self.event_handler.request_completed_from_app_counter_for_badput)/self.simulation_time} reqs/sec
+db server throughput : {(self.event_handler.request_completed_from_db_counter_for_goodput + self.event_handler.request_completed_from_db_counter_for_badput)/self.simulation_time} reqs/sec
+
+system goodput : {(self.event_handler.request_completed_from_system_for_goodput)/self.simulation_time} reqs/sec
+app server goodput : {(self.event_handler.request_completed_from_app_counter_for_goodput)/self.simulation_time} reqs/sec
+db server goodput : {(self.event_handler.request_completed_from_db_counter_for_goodput)/self.simulation_time} reqs/sec
+
+system badput : {(self.event_handler.request_completed_from_system_for_badput)/self.simulation_time} reqs/sec
+app server badput : {(self.event_handler.request_completed_from_app_counter_for_badput)/self.simulation_time} reqs/sec
+db server badput : {(self.event_handler.request_completed_from_db_counter_for_badput)/self.simulation_time} reqs/sec
 
 system average response time : {self.event_handler.average_response_time_of_system} sec
 app server average response time : {self.event_handler.average_response_time_of_app_server} sec
@@ -139,8 +159,8 @@ number in db app server : {self.event_handler.number_in_db_server}
 
 priority requests dropped : {self.event_handler.priority_request_dropped}
 regular requests dropped : {self.event_handler.regular_request_dropped}
-total requests served : {self.event_handler.request_completed_from_system}
-fraction of requests dropped : {round((self.event_handler.priority_request_dropped + self.event_handler.regular_request_dropped)/(self.event_handler.request_completed_from_system + self.event_handler.priority_request_dropped + self.event_handler.regular_request_dropped),3)}
+total requests served : {self.event_handler.request_completed_from_system_for_goodput + self.event_handler.request_completed_from_system_for_badput}
+fraction of requests dropped : {round((self.event_handler.priority_request_dropped + self.event_handler.regular_request_dropped)/(self.event_handler.request_completed_from_system_for_goodput + self.event_handler.request_completed_from_system_for_badput + self.event_handler.priority_request_dropped + self.event_handler.regular_request_dropped),3)}
 
 app server utilization : {self.event_handler.application_server.busy_cores/self.event_handler.application_server.core_count}
 db server utlization: {self.event_handler.db_server.busy_cores/self.event_handler.db_server.core_count}
