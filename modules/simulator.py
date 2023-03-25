@@ -41,7 +41,8 @@ class Simulator:
             app_server_queue_length = argv["app_server_queue_length"],
             db_server_queue_length = argv["db_server_queue_length"],
             retry_delay = argv['retry_delay'],
-            request_timeout = argv['request_timeout']
+            request_timeout = argv['request_timeout'],
+            db_call_is_synchronous = argv['db_call_is_synchronous']
         )
 
         self.num_clients = argv['clients']
@@ -96,6 +97,7 @@ class Simulator:
             "priority_probability" : [self.event_handler.priority_prob],
             "app_server_queue_length" : [self.event_handler.app_server_queue_length],
             "db_server_queue_length" : [self.event_handler.db_server_queue_length],
+            "db_call_is_synchronous": [self.event_handler.db_call_is_synchronous],
 
             # "system_throughput" : [self.event_handler.request_completed_from_system/self.simulation_time],
             # "app_server_throughput" : [self.event_handler.request_completed_from_app_counter/self.simulation_time],
@@ -137,6 +139,19 @@ class Simulator:
             results.to_csv('RT_{}_simulation.csv'.format(self.request_timeout), mode='a', header=False, index=False)
 
         print(f"""
+-- SYSTEM CONFIGURATION --
+num clients : {self.num_clients}
+app servers : {self.event_handler.application_server.core_count}
+db servers : {self.event_handler.db_server.core_count}
+app server service time : {self.event_handler.application_server.average_service_time} seconds
+db server service time : {self.event_handler.db_server.average_service_time} seconds
+app to db server probability : {self.event_handler.app_to_db_prob}
+priority probability : {self.event_handler.priority_prob}
+app server queue length : {self.event_handler.app_server_queue_length}
+db server queue length : {self.event_handler.db_server_queue_length}
+synchronous db calls: {self.event_handler.db_call_is_synchronous}
+
+-- RESULTS --
 system throughput : {(self.event_handler.request_completed_from_system_for_goodput + self.event_handler.request_completed_from_system_for_badput)/self.simulation_time} reqs/sec
 app server throughput : {(self.event_handler.request_completed_from_app_counter_for_goodput + self.event_handler.request_completed_from_app_counter_for_badput)/self.simulation_time} reqs/sec
 db server throughput : {(self.event_handler.request_completed_from_db_counter_for_goodput + self.event_handler.request_completed_from_db_counter_for_badput)/self.simulation_time} reqs/sec

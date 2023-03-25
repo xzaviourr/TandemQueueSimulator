@@ -13,7 +13,7 @@ from utils.probability_gen import get_probablity, calculate_average_response_tim
 class EventHandler:
     def __init__(self, event_queue:List[Event], application_server:Server, db_server:Server, app_to_db_prob:float, 
                  think_time:float, priority_prob:float, logger:logging.Logger, app_server_queue_length:int, 
-                 db_server_queue_length:int, retry_delay:float, request_timeout:int) -> None:
+                 db_server_queue_length:int, retry_delay:float, request_timeout:float, db_call_is_synchronous:bool) -> None:
         """Instance of event handler for the simulator
 
         Args:
@@ -28,6 +28,7 @@ class EventHandler:
             db_server_queue_length (int): Maximum lenght of waiting queue of db server
             retry_delay (float): Retry sending packet after failure
             request_timeout (float): Timeout value for requests
+            db_call_is_synchronous (bool): Flag to run the simulation with synchronous db calls
         """
         self.logger = logger
         
@@ -41,6 +42,7 @@ class EventHandler:
         self.db_server_queue_length = db_server_queue_length
         self.retry_delay = retry_delay
         self.request_timeout = request_timeout
+        self.db_call_is_synchronous = db_call_is_synchronous
 
         self.request_dropped_dict = {}
         self.request_completed_dict = {}
@@ -148,7 +150,7 @@ class EventHandler:
                 else:   # Request moves to queue
                     self.push_in_queue(event, self.db_server, self.db_server_queue_length, current_time)
 
-                if not settings.SYNCHRONIZE:
+                if not self.db_call_is_synchronous:
                     self.application_server.busy_cores -= 1
 
             else:   # Request completed
@@ -178,29 +180,30 @@ class EventHandler:
             self.application_server.busy_cores -= 1            
 
         # Schedule next request
-        while True:
-            if len(self.application_server.priority_queue) != 0:    # Priority request waiting
-                new_request = self.application_server.priority_queue.pop(0)
+        if self.application_server.busy_cores < self.application_server.core_count:
+            while True:
+                if len(self.application_server.priority_queue) != 0:    # Priority request waiting
+                    new_request = self.application_server.priority_queue.pop(0)
 
-            elif len(self.application_server.regular_queue) != 0:   # Regular request waiting
-                new_request = self.application_server.regular_queue.pop(0)
+                elif len(self.application_server.regular_queue) != 0:   # Regular request waiting
+                    new_request = self.application_server.regular_queue.pop(0)
 
-            else:   # No request available for scheduling
-                break
+                else:   # No request available for scheduling
+                    break
 
-            if new_request.id not in self.request_dropped_dict.keys():
-                after_service_time = current_time + self.application_server.get_service_time()
+                if new_request.id not in self.request_dropped_dict.keys():
+                    after_service_time = current_time + self.application_server.get_service_time()
 
-                heapq.heappush(
-                    self.event_queue, 
-                    Event(     # Start processing the event
-                        type = settings.EVENT_REQUEST_COMPLETE_FROM_APP_SERVER,
-                        request = new_request,
-                        time = after_service_time
+                    heapq.heappush(
+                        self.event_queue, 
+                        Event(     # Start processing the event
+                            type = settings.EVENT_REQUEST_COMPLETE_FROM_APP_SERVER,
+                            request = new_request,
+                            time = after_service_time
+                        )
                     )
-                )
-                self.application_server.busy_cores += 1
-                break
+                    self.application_server.busy_cores += 1
+                    break
         
         self.number_in_app_server = calculate_number_in_the_server(self.application_server)
         self.number_in_db_server = calculate_number_in_the_server(self.db_server)
@@ -231,7 +234,7 @@ class EventHandler:
                         time = current_time + self.application_server.get_service_time()
                     )
                 )
-                if not settings.SYNCHRONIZE:
+                if not self.db_call_is_synchronous:
                     self.application_server.busy_cores += 1
             else:
                 self.push_in_queue(event, self.application_server, self.app_server_queue_length, current_time)
