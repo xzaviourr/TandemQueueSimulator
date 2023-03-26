@@ -30,7 +30,6 @@ class Simulator:
         )
 
         self.event_queue = []   # Priority queue for event handler
-        
         self.event_handler = EventHandler(
             event_queue = self.event_queue,
             application_server = self.application_server,
@@ -98,7 +97,7 @@ class Simulator:
             "priority_probability" : [self.event_handler.priority_prob],
             "app_server_queue_length" : [self.event_handler.app_server_queue_length],
             "db_server_queue_length" : [self.event_handler.db_server_queue_length],
-            "db_call_is_synchronous": [self.event_handler.db_call_is_synchronous],
+            "db_call_is_synchronous": [bool(self.event_handler.db_call_is_synchronous)],
 
             # "system_throughput" : [self.event_handler.request_completed_from_system/self.simulation_time],
             # "app_server_throughput" : [self.event_handler.request_completed_from_app_counter/self.simulation_time],
@@ -159,7 +158,7 @@ app to db server probability : {self.event_handler.app_to_db_prob}
 priority probability : {self.event_handler.priority_prob}
 app server queue length : {self.event_handler.app_server_queue_length}
 db server queue length : {self.event_handler.db_server_queue_length}
-synchronous db calls: {self.event_handler.db_call_is_synchronous}
+synchronous db calls: {bool(self.event_handler.db_call_is_synchronous)}
 
 -- Temporal Data --
 {self.event_handler.temporal_data}

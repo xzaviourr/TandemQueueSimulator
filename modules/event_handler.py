@@ -95,15 +95,17 @@ class EventHandler:
             event (Event): Event to be handled
             current_time (float): current time of the simulation
         """
+        # Timout event for the current request
         heapq.heappush(
             self.event_queue, 
-            Event(     # Timout event
+            Event( 
                 type = settings.EVENT_TIMEOUT,
                 request = event.request,
                 time = current_time + self.request_timeout
             )
         )
 
+        # Schedule the request if the cores are available
         if self.application_server.busy_cores < self.application_server.core_count:  # cores are available
             heapq.heappush(
                 self.event_queue, 
@@ -115,9 +117,11 @@ class EventHandler:
             )
             self.application_server.busy_cores += 1
 
+        # Add the request in the waiting queue
         else:
             self.push_in_queue(event, self.application_server, self.app_server_queue_length, current_time)
         
+        # Update statistics
         self.number_in_app_server = calculate_number_in_the_server(self.application_server)
         self.number_in_db_server = calculate_number_in_the_server(self.db_server)
         self.number_in_system = self.number_in_app_server + self.number_in_db_server
@@ -129,17 +133,26 @@ class EventHandler:
             event (Event): Event to be handled
             current_time (float): current time of the simulation
         """
+        self.application_server.busy_cores -= 1
+
+        # If request has not been timed out yet
         if event.request.id not in self.request_failure_dict.keys():
             response_time = current_time - event.request.arrival_time
-            self.average_response_time_of_app_server = calculate_average_response_time(self.average_response_time_of_app_server, (self.request_completed_from_app_counter_for_goodput + self.request_completed_from_app_counter_for_badput), response_time)
+            self.average_response_time_of_app_server = calculate_average_response_time(
+                self.average_response_time_of_app_server, 
+                (self.request_completed_from_app_counter_for_goodput + self.request_completed_from_app_counter_for_badput), 
+                response_time)
             
+            # If request was timed out before
             if event.request.is_timed_out:
                 self.request_completed_from_app_counter_for_badput += 1
             else:
                 self.request_completed_from_app_counter_for_goodput += 1
             
-            if get_probablity(self.app_to_db_prob): # Request moves to db
-                if self.db_server.busy_cores < self.db_server.core_count:   # Request goes to processing
+            # Request moves from app to db server
+            if get_probablity(self.app_to_db_prob):
+                # If db server has available cores
+                if self.db_server.busy_cores < self.db_server.core_count:
                     heapq.heappush(
                         self.event_queue,
                         Event(
@@ -149,15 +162,17 @@ class EventHandler:
                         )
                     )
                     self.db_server.busy_cores += 1
+                    if self.db_call_is_synchronous:
+                        self.application_server.busy_cores += 1
 
-                else:   # Request moves to queue
+                # Request moves to queue
+                else:   
                     self.push_in_queue(event, self.db_server, self.db_server_queue_length, current_time)
 
-                if not self.db_call_is_synchronous:
-                    self.application_server.busy_cores -= 1
-
-            else:   # Request completed
+            # Request completed from the system
+            else:
                 self.request_completed_dict[event.request.id] = 1
+                # New arrival event after think time
                 heapq.heappush(
                         self.event_queue,
                         Event(
@@ -171,18 +186,19 @@ class EventHandler:
                             time = current_time + self.think_time
                         )
                     )
-                self.application_server.busy_cores -= 1    
                 response_time = (current_time - event.request.arrival_time)
-                self.average_response_time_of_system = calculate_average_response_time(self.average_response_time_of_system, (self.request_completed_from_system_for_goodput + self.request_completed_from_system_for_badput), response_time)
+                self.average_response_time_of_system = calculate_average_response_time(
+                    self.average_response_time_of_system, 
+                    (self.request_completed_from_system_for_goodput + self.request_completed_from_system_for_badput), 
+                    response_time)
+                
+                # If request was timed out before
                 if event.request.is_timed_out:
                     self.request_completed_from_system_for_badput += 1
                 else:
                     self.request_completed_from_system_for_goodput += 1
-        
-        else: # scheduling a new request in place of the one being timed out
-            self.application_server.busy_cores -= 1
             
-        # Schedule next request
+        # Schedule next request if core became free
         if self.application_server.busy_cores < self.application_server.core_count:
             while True:
                 if len(self.application_server.priority_queue) != 0:    # Priority request waiting
@@ -194,6 +210,7 @@ class EventHandler:
                 else:   # No request available for scheduling
                     break
 
+                # If request has not timed out yet
                 if new_request.id not in self.request_failure_dict.keys():
                     after_service_time = current_time + self.application_server.get_service_time()
 
@@ -207,9 +224,8 @@ class EventHandler:
                     )
                     self.application_server.busy_cores += 1
                     break
-
-                # what if it was in failure dict?
         
+        # Update statistics
         self.number_in_app_server = calculate_number_in_the_server(self.application_server)
         self.number_in_db_server = calculate_number_in_the_server(self.db_server)
         self.number_in_system = self.number_in_app_server + self.number_in_db_server
@@ -221,16 +237,25 @@ class EventHandler:
             event (Event): Event to be handled
             current_time (float): current simulation time
         """
+        self.db_server.busy_cores -= 1
+        if self.db_call_is_synchronous:
+            self.application_server.busy_cores -= 1
+
+        # If request has not been timed out yet
         if event.request.id not in self.request_failure_dict.keys():
             response_time = current_time - event.request.arrival_time
-            self.average_response_time_of_db_server = calculate_average_response_time(self.average_response_time_of_db_server, (self.request_completed_from_db_counter_for_goodput + self.request_completed_from_db_counter_for_badput), response_time)
+            self.average_response_time_of_db_server = calculate_average_response_time(
+                self.average_response_time_of_db_server, 
+                (self.request_completed_from_db_counter_for_goodput + self.request_completed_from_db_counter_for_badput), 
+                response_time)
             
+            # If request was not timed out before
             if event.request.is_timed_out:
                 self.request_completed_from_db_counter_for_badput += 1
             else:
                 self.request_completed_from_db_counter_for_goodput += 1
             
-            self.db_server.busy_cores -= 1
+            # If call was synchronous, application server is already waiting
             if self.db_call_is_synchronous:
                 heapq.heappush(
                     self.event_queue, 
@@ -240,8 +265,12 @@ class EventHandler:
                         time = current_time + self.application_server.get_service_time()
                     )
                 )
-            else:   # Call is async
-                if self.application_server.busy_cores < self.application_server.core_count:  # cores are available
+                self.application_server.busy_cores += 1
+            
+            # If call was async, then request moves to application server and waits for its turn
+            else:
+                # If cores are available, start executing
+                if self.application_server.busy_cores < self.application_server.core_count:
                     heapq.heappush(
                         self.event_queue, 
                         Event(     # Start processing the event
@@ -251,12 +280,10 @@ class EventHandler:
                         )
                     )
                     self.application_server.busy_cores += 1
+                
+                # Push in waiting queue
                 else:
                     self.push_in_queue(event, self.application_server, self.app_server_queue_length, current_time)
-        
-        else: # what if the request is in failure dict? .. why not calling the event handler? 
-            self.db_server.busy_cores -= 1
-            self.application_server.busy_cores -= 1
 
         # Schedule new request
         while True:
@@ -267,6 +294,7 @@ class EventHandler:
             else:   # No request available for scheduling
                 break
 
+            # If request has not timed out yet
             if new_request.id not in self.request_failure_dict.keys():
                 after_service_time = current_time + self.db_server.get_service_time()
 
@@ -281,8 +309,12 @@ class EventHandler:
                 self.db_server.busy_cores += 1
                 break
 
-            # what if it was in failure dict?
+            # Request was timed out
+            else:
+                if self.db_call_is_synchronous:
+                    self.application_server.busy_cores -= 1
     
+        # Update statistics
         self.number_in_app_server = calculate_number_in_the_server(self.application_server)
         self.number_in_db_server = calculate_number_in_the_server(self.db_server)
         self.number_in_system = self.number_in_app_server + self.number_in_db_server

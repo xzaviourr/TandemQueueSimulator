@@ -22,9 +22,8 @@ if __name__ == "__main__":
     parser.add_argument('--db_server_queue_length', type=float, required=True, help='length of db server queue')
     parser.add_argument('--retry_delay', type=float, required=True, help='delay time after request timeout')
     parser.add_argument('--request_timeout', type=float, required=True, help='request timeout time')
-    parser.add_argument('--db_call_is_synchronous', type=bool, required=True, help='boolean flag to run the simulation with synchronous db calls')
+    parser.add_argument('--db_call_is_synchronous', type=int, required=True, help='boolean flag to run the simulation with synchronous db calls')
     args = parser.parse_args()
-
     sim = Simulator(
         application_server_count = args.app_servers,
         db_server_count = args.db_servers,
