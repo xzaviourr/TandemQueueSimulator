@@ -9,6 +9,7 @@ from modules.event import Event
 from modules.request import Request
 from utils.probability_gen import get_probablity
 from utils.logger import get_logger
+import matplotlib.pyplot as plt
 
 
 class Simulator:
@@ -138,6 +139,15 @@ class Simulator:
         else: # else it exists so append without writing the header
             results.to_csv('RT_{}_simulation.csv'.format(self.request_timeout), mode='a', header=False, index=False)
 
+
+        # plt.plot(self.event_handler.temporal_data.keys(), self.event_handler.temporal_data.values(), label="Number of Requests timedout")
+        # plt.title("Request Timeout -- Time Series ")
+        # plt.xlabel("System Time")
+        # plt.ylabel("Number of requests timedout")
+        # plt.legend()
+        # plt.savefig("./{}/throughput_comparison_curve.jpg".format(filename), bbox_inches="tight")
+        # plt.show()
+
         print(f"""
 -- SYSTEM CONFIGURATION --
 num clients : {self.num_clients}
@@ -150,6 +160,9 @@ priority probability : {self.event_handler.priority_prob}
 app server queue length : {self.event_handler.app_server_queue_length}
 db server queue length : {self.event_handler.db_server_queue_length}
 synchronous db calls: {self.event_handler.db_call_is_synchronous}
+
+-- Temporal Data --
+{self.event_handler.temporal_data}
 
 -- RESULTS --
 system throughput : {(self.event_handler.request_completed_from_system_for_goodput + self.event_handler.request_completed_from_system_for_badput)/self.simulation_time} reqs/sec

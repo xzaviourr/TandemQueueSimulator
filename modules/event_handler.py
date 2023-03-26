@@ -61,6 +61,8 @@ class EventHandler:
         self.average_response_time_of_system = 0
         self.average_response_time_of_app_server = 0
         self.average_response_time_of_db_server = 0
+
+        self.temporal_data = {}
         
         self.number_in_app_server = calculate_number_in_the_server(self.application_server)
         self.number_in_db_server = calculate_number_in_the_server(self.db_server)
@@ -303,6 +305,11 @@ class EventHandler:
             self.logger.critical(f"REQUEST_TIMEDOUT : {event.request.id} : {current_time}")
 
         self.request_failure_dict[event.request.id] = 1
+
+        if int(current_time/10)*10 in self.temporal_data.keys():
+            self.temporal_data[int(current_time/10)*10] += 1
+        else:
+            self.temporal_data[int(current_time/10)*10] = 1
 
         if not is_timeout:
             heapq.heappush(
