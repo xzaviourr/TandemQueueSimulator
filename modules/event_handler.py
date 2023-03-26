@@ -44,7 +44,7 @@ class EventHandler:
         self.request_timeout = request_timeout
         self.db_call_is_synchronous = db_call_is_synchronous
 
-        self.request_dropped_dict = {}
+        self.request_failure_dict = {}
         self.request_completed_dict = {}
 
         self.request_completed_from_app_counter_for_goodput = 0
@@ -79,12 +79,12 @@ class EventHandler:
             if len(server.priority_queue) < queue_length:
                 server.priority_queue.append(event.request)
             else:
-                self.handle_event_timeout(event, current_time)  # Request dropped due to queue overflow
+                self.handle_event_request_failure(event, current_time)  # Request dropped due to queue overflow
         else:
             if len(server.regular_queue) < queue_length:
                 server.regular_queue.append(event.request)
             else:
-                self.handle_event_timeout(event, current_time)  # Request dropped due to queue overflow
+                self.handle_event_request_failure(event, current_time)  # Request dropped due to queue overflow
 
     def handle_event_request_arrival(self, event:Event, current_time:float):
         """Event generated when request arrives at the application server
@@ -127,9 +127,10 @@ class EventHandler:
             event (Event): Event to be handled
             current_time (float): current time of the simulation
         """
-        if not event.request.id in self.request_dropped_dict.keys():
+        if event.request.id not in self.request_failure_dict.keys():
             response_time = current_time - event.request.arrival_time
             self.average_response_time_of_app_server = calculate_average_response_time(self.average_response_time_of_app_server, (self.request_completed_from_app_counter_for_goodput + self.request_completed_from_app_counter_for_badput), response_time)
+            
             if event.request.is_timed_out:
                 self.request_completed_from_app_counter_for_badput += 1
             else:
@@ -176,9 +177,9 @@ class EventHandler:
                 else:
                     self.request_completed_from_system_for_goodput += 1
         
-        else:
-            self.application_server.busy_cores -= 1            
-
+        else: # scheduling a new request in place of the one being timed out
+            self.application_server.busy_cores -= 1
+            
         # Schedule next request
         if self.application_server.busy_cores < self.application_server.core_count:
             while True:
@@ -191,7 +192,7 @@ class EventHandler:
                 else:   # No request available for scheduling
                     break
 
-                if new_request.id not in self.request_dropped_dict.keys():
+                if new_request.id not in self.request_failure_dict.keys():
                     after_service_time = current_time + self.application_server.get_service_time()
 
                     heapq.heappush(
@@ -204,6 +205,8 @@ class EventHandler:
                     )
                     self.application_server.busy_cores += 1
                     break
+
+                # what if it was in failure dict?
         
         self.number_in_app_server = calculate_number_in_the_server(self.application_server)
         self.number_in_db_server = calculate_number_in_the_server(self.db_server)
@@ -216,16 +219,17 @@ class EventHandler:
             event (Event): Event to be handled
             current_time (float): current simulation time
         """
-        if event.request.id not in self.request_dropped_dict.keys():
+        if event.request.id not in self.request_failure_dict.keys():
             response_time = current_time - event.request.arrival_time
             self.average_response_time_of_db_server = calculate_average_response_time(self.average_response_time_of_db_server, (self.request_completed_from_db_counter_for_goodput + self.request_completed_from_db_counter_for_badput), response_time)
+            
             if event.request.is_timed_out:
                 self.request_completed_from_db_counter_for_badput += 1
             else:
                 self.request_completed_from_db_counter_for_goodput += 1
             
             self.db_server.busy_cores -= 1
-            if self.application_server.busy_cores < self.application_server.core_count:  # cores are available
+            if self.db_call_is_synchronous:
                 heapq.heappush(
                     self.event_queue, 
                     Event(     # Start processing the event
@@ -234,12 +238,23 @@ class EventHandler:
                         time = current_time + self.application_server.get_service_time()
                     )
                 )
-                if not self.db_call_is_synchronous:
+            else:   # Call is async
+                if self.application_server.busy_cores < self.application_server.core_count:  # cores are available
+                    heapq.heappush(
+                        self.event_queue, 
+                        Event(     # Start processing the event
+                            type = settings.EVENT_REQUEST_COMPLETE_FROM_APP_SERVER,
+                            request = event.request,
+                            time = current_time + self.application_server.get_service_time()
+                        )
+                    )
                     self.application_server.busy_cores += 1
-            else:
-                self.push_in_queue(event, self.application_server, self.app_server_queue_length, current_time)
-        else:
+                else:
+                    self.push_in_queue(event, self.application_server, self.app_server_queue_length, current_time)
+        
+        else: # what if the request is in failure dict? .. why not calling the event handler? 
             self.db_server.busy_cores -= 1
+            self.application_server.busy_cores -= 1
 
         # Schedule new request
         while True:
@@ -250,7 +265,7 @@ class EventHandler:
             else:   # No request available for scheduling
                 break
 
-            if new_request.id not in self.request_dropped_dict.keys():
+            if new_request.id not in self.request_failure_dict.keys():
                 after_service_time = current_time + self.db_server.get_service_time()
 
                 heapq.heappush(
@@ -263,25 +278,31 @@ class EventHandler:
                 )
                 self.db_server.busy_cores += 1
                 break
+
+            # what if it was in failure dict?
     
         self.number_in_app_server = calculate_number_in_the_server(self.application_server)
         self.number_in_db_server = calculate_number_in_the_server(self.db_server)
         self.number_in_system = self.number_in_app_server + self.number_in_db_server
 
-    def handle_event_timeout(self, event:Event, current_time:float, is_timeout:bool=False):
+    def handle_event_request_failure(self, event:Event, current_time:float, is_timeout:bool=False):
         """Event handled when timeout is raised or buffer queue is full
 
         Args:
             event (Event): Event to be handled
             current_time (float): current time of the simulation
         """
-        self.logger.critical(f"REQUEST_DROPPED : {event.request.id} : {current_time}")
-        if event.request.request_priority == settings.HIGH_PRIORITY:
-            self.priority_request_dropped += 1
+        
+        if not is_timeout:
+            self.logger.critical(f"REQUEST_DROPPED : {event.request.id} : {current_time}")
+            if event.request.request_priority == settings.HIGH_PRIORITY:
+                self.priority_request_dropped += 1
+            else:
+                self.regular_request_dropped += 1
         else:
-            self.regular_request_dropped += 1
+            self.logger.critical(f"REQUEST_TIMEDOUT : {event.request.id} : {current_time}")
 
-        self.request_dropped_dict[event.request.id] = 1
+        self.request_failure_dict[event.request.id] = 1
 
         if not is_timeout:
             heapq.heappush(
@@ -332,4 +353,4 @@ class EventHandler:
 
         elif event.type == settings.EVENT_TIMEOUT:
             if event.request.id not in self.request_completed_dict.keys():  # Completed
-                self.handle_event_timeout(event=event, current_time=current_time, is_timeout=True)
+                self.handle_event_request_failure(event=event, current_time=current_time, is_timeout=True)
