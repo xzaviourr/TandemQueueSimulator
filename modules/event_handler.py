@@ -162,12 +162,13 @@ class EventHandler:
                         )
                     )
                     self.db_server.busy_cores += 1
-                    if self.db_call_is_synchronous:
-                        self.application_server.busy_cores += 1
 
                 # Request moves to queue
                 else:   
                     self.push_in_queue(event, self.db_server, self.db_server_queue_length, current_time)
+                
+                if self.db_call_is_synchronous:
+                    self.application_server.busy_cores += 1
 
             # Request completed from the system
             else:

@@ -40,4 +40,21 @@ if __name__ == "__main__":
         request_timeout = args.request_timeout,
         db_call_is_synchronous = args.db_call_is_synchronous
     )
+
+    # sim = Simulator(
+    #     application_server_count = 20,
+    #     db_server_count = 5,
+    #     application_service_time = 0.1,
+    #     db_service_time = 1,
+    #     app_to_db_prob = 0.02,
+    #     simulation_time = 200,
+    #     clients = 1360,
+    #     think_time = 5,
+    #     priority_prob = 0.2,
+    #     app_server_queue_length = 1000,
+    #     db_server_queue_length = 1000,
+    #     retry_delay = 0.1,
+    #     request_timeout = 20,
+    #     db_call_is_synchronous = 1
+    # )
     sim.run()

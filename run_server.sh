@@ -1,10 +1,10 @@
 #!/bin/bash
 
-for db_call_type in 0 1
+for db_call_type in 1 0
 do
     db_call_is_synchronous_str=$(echo $db_call_type)
     request_timeout_str=$(echo $request_timeout)
-    for (( num_users=1461; num_users<=1501; num_users=num_users+10));
+    for (( num_users=1; num_users<=1451; num_users=num_users+50));
     do
         num_users_str=$(echo $num_users)
         echo Number_of_users: $num_users_str
